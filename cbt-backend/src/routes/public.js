@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { getConfig } from '../controllers/configController.js';
+import { listProjectThemes, listThemes } from '../controllers/themeController.js';
+import { listQuestionsByTheme } from '../controllers/questionController.js';
+import { getProjectCaseByTheme } from '../controllers/projectCaseController.js';
+const router = Router();
+router.get('/config', getConfig);
+router.get('/themes', listThemes);
+router.get('/project-themes', listProjectThemes);
+router.get('/themes/:themeId/questions', listQuestionsByTheme);
+router.get('/project-themes/:themeId/project-case', getProjectCaseByTheme);
+export default router;
