@@ -2,10 +2,14 @@ import { query } from '../db/pool.js';
 export async function listQuestionsByTheme(req, res) {
     const { themeId } = req.params;
     const { participantId } = req.query;
+    const [theme] = await query('SELECT randomize_items, item_limit FROM themes WHERE id = $1', [themeId]);
+    const shouldRandomize = theme?.randomize_items !== false;
+    const itemLimit = Math.max(Number(theme?.item_limit || 0), 0);
     const questions = await query(`SELECT id, theme_id AS "themeId", type, question, options, correct_answer AS "correctAnswer", weight
      FROM questions
      WHERE theme_id = $1
-     ORDER BY ${participantId ? 'md5(id || $2)' : 'id ASC'}`, participantId ? [themeId, participantId] : [themeId]);
+     ORDER BY ${participantId && shouldRandomize ? 'md5(id || $2)' : 'id ASC'}
+     ${itemLimit > 0 ? `LIMIT ${itemLimit}` : ''}`, participantId && shouldRandomize ? [themeId, participantId] : [themeId]);
     res.json(questions);
 }
 export async function createQuestion(req, res) {

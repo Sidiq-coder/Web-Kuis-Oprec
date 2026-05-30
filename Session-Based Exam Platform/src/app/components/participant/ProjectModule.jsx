@@ -7,10 +7,11 @@ import { apiGet, apiPatch, apiPost } from '../../utils/api';
 import TechConfirmDialog from '../ui/TechConfirmDialog';
 export default function ProjectModule() {
     const navigate = useNavigate();
+    const [currentProject, setCurrentProject] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
     const [durationSeconds, setDurationSeconds] = useState(0);
     const [projectCase, setProjectCase] = useState(null);
-    const [uploadedFile, setUploadedFile] = useState(null);
+    const [uploadedFiles, setUploadedFiles] = useState({});
     const [uploadError, setUploadError] = useState('');
     const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,28 +91,35 @@ export default function ProjectModule() {
         localStorage.removeItem('project_timer');
         navigate('/participant/complete', { replace: true });
     };
-    const handleFileSelect = (e) => {
+    const getProjectCases = () => projectCase?.cases?.length ? projectCase.cases : projectCase ? [projectCase] : [];
+    const getUploadKey = (item, index) => item.id || `project-${index}`;
+    const handleFileSelect = (e, item, index) => {
         const file = e.target.files?.[0];
         if (!file)
             return;
         setUploadError('');
+        const uploadKey = getUploadKey(item, index);
+        const allowedFormats = item.allowedFormats || projectCase.allowedFormats || [];
+        const maxSize = item.maxSize || projectCase.maxSize || 0;
         // Check file extension
         const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-        if (!projectCase.allowedFormats.includes(extension)) {
-            setUploadError(`Invalid file format. Allowed formats: ${projectCase.allowedFormats.join(', ')}`);
+        if (!allowedFormats.includes(extension)) {
+            setUploadError(`Invalid file format for Project ${index + 1}. Allowed formats: ${allowedFormats.join(', ')}`);
             return;
         }
         // Check file size (convert MB to bytes)
-        const maxSizeBytes = projectCase.maxSize * 1024 * 1024;
+        const maxSizeBytes = maxSize * 1024 * 1024;
         if (file.size > maxSizeBytes) {
-            setUploadError(`File size exceeds ${projectCase.maxSize}MB limit`);
+            setUploadError(`File size for Project ${index + 1} exceeds ${maxSize}MB limit`);
             return;
         }
-        setUploadedFile(file);
+        setUploadedFiles((prev) => ({ ...prev, [uploadKey]: file }));
     };
     const handleSubmit = async () => {
-        if (!uploadedFile) {
-            setUploadError('Please upload your project file before submitting');
+        const projectCases = getProjectCases();
+        const missingIndex = projectCases.findIndex((item, index) => !uploadedFiles[getUploadKey(item, index)]);
+        if (missingIndex !== -1) {
+            setUploadError(`Please upload the file for Project ${missingIndex + 1} before submitting`);
             return;
         }
         setIsSubmitDialogOpen(true);
@@ -123,12 +131,15 @@ export default function ProjectModule() {
             return;
         }
       setIsSubmitting(true);
-        const formData = new FormData();
-        formData.append('file', uploadedFile);
-        formData.append('themeId', session.projectTheme || '');
-        formData.append('title', projectCase.title);
+        const projectCases = getProjectCases();
         try {
-            await apiPost(`/api/participants/${session.participantId}/project-submissions`, formData);
+            await Promise.all(projectCases.map((item, index) => {
+                const formData = new FormData();
+                formData.append('file', uploadedFiles[getUploadKey(item, index)]);
+                formData.append('themeId', session.projectTheme || '');
+                formData.append('title', projectCases.length > 1 ? `Project ${index + 1}: ${item.title}` : item.title);
+                return apiPost(`/api/participants/${session.participantId}/project-submissions`, formData);
+            }));
         if (timerRef.current) {
           clearInterval(timerRef.current);
         }
@@ -169,6 +180,13 @@ export default function ProjectModule() {
     }
     const isTimeRunningOut = timeLeft < 600; // less than 10 minutes
     const timeProgress = durationSeconds ? ((durationSeconds - timeLeft) / durationSeconds) * 100 : 0;
+    const projectCases = getProjectCases();
+    const allUploadsReady = projectCases.length > 0 && projectCases.every((item, index) => uploadedFiles[getUploadKey(item, index)]);
+    const activeProject = projectCases[currentProject] || projectCases[0];
+    const activeUploadKey = activeProject ? getUploadKey(activeProject, currentProject) : '';
+    const activeUploadedFile = uploadedFiles[activeUploadKey];
+    const activeAllowedFormats = activeProject?.allowedFormats || projectCase.allowedFormats || [];
+    const activeMaxSize = activeProject?.maxSize || projectCase.maxSize || 0;
     return (<div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-4">
       <TechConfirmDialog open={isSubmitDialogOpen} title="Submit project file?" description="Your uploaded project will be sent for review and the participant flow will be completed. You cannot change the file after submission." confirmLabel="Submit Project" cancelLabel="Review File" intent="primary" onCancel={() => setIsSubmitDialogOpen(false)} onConfirm={() => {
         setIsSubmitDialogOpen(false);
@@ -181,7 +199,9 @@ export default function ProjectModule() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl text-gray-800 mb-1">Project Assignment</h1>
-              <p className="text-gray-600 text-sm">Complete your project and upload the files</p>
+              <p className="text-gray-600 text-sm">
+                Project {currentProject + 1} of {projectCases.length}. Complete each project and upload its file.
+              </p>
             </div>
 
             <div className="text-right">
@@ -203,74 +223,95 @@ export default function ProjectModule() {
 
         {/* Project Case Study */}
         <Paper elevation={3} sx={{ borderRadius: '16px', p: 4, mb: 3 }}>
-          <div className="mb-4">
-            <Chip label="Case Study" color="primary" size="small"/>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Chip label={projectCases.length > 1 ? `${projectCases.length} Case Studies` : 'Case Study'} color="primary" size="small"/>
+            <Chip label={`Project ${currentProject + 1} / ${projectCases.length}`} color="primary" variant="outlined" size="small"/>
           </div>
 
-          <h2 className="text-2xl text-gray-800 mb-4">{projectCase.title}</h2>
+          <h2 className="text-2xl text-gray-800 mb-4">{activeProject?.title}</h2>
 
-          <div className="mb-6">
-            <h3 className="text-lg text-gray-700 mb-2">Description</h3>
-            <p className="text-gray-600 whitespace-pre-line">{projectCase.description}</p>
+          <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+            <div className="mb-4">
+              <h3 className="text-lg text-gray-700 mb-2">Description</h3>
+              <p className="text-gray-600 whitespace-pre-line">{activeProject?.description}</p>
+            </div>
+            <div>
+              <h3 className="text-lg text-gray-700 mb-2">Requirements</h3>
+              <ul className="list-disc list-inside space-y-2">
+                {(activeProject?.requirements || []).map((req, index) => (<li key={index} className="text-gray-600">
+                    {req}
+                  </li>))}
+              </ul>
+            </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-lg text-gray-700 mb-2">Requirements</h3>
-            <ul className="list-disc list-inside space-y-2">
-              {projectCase.requirements.map((req, index) => (<li key={index} className="text-gray-600">
-                  {req}
-                </li>))}
-            </ul>
-          </div>
+          {projectCases.length > 1 && (<div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+              <p className="mb-3 text-sm font-semibold text-gray-700">Project Navigator</p>
+              <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
+                {projectCases.map((item, index) => {
+                    const isCurrent = index === currentProject;
+                    const isUploaded = Boolean(uploadedFiles[getUploadKey(item, index)]);
+                    return (<button key={getUploadKey(item, index)} type="button" onClick={() => setCurrentProject(index)} className={`h-10 rounded-lg border text-sm font-semibold transition ${isCurrent
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : isUploaded
+                            ? 'border-green-300 bg-green-50 text-green-700'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50'}`}>
+                        {index + 1}
+                      </button>);
+                })}
+              </div>
+            </div>)}
 
           <Alert severity="info">
             <strong>Work Instructions:</strong>
             <br />
-            Complete your project on your local machine using your preferred tools and frameworks. Once finished,
-            compress your project files and upload them below.
+            Complete the active project on your local machine. Use Next/Previous to move between projects and upload each project file separately.
           </Alert>
         </Paper>
 
         {/* File Upload Section */}
         <Paper elevation={3} sx={{ borderRadius: '16px', p: 4, mb: 3 }}>
-          <h3 className="text-xl text-gray-800 mb-4">Upload Your Project</h3>
+          <h3 className="text-xl text-gray-800 mb-4">Upload File for Project {currentProject + 1}</h3>
 
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">
-              <strong>Allowed formats:</strong> {projectCase.allowedFormats.join(', ')}
-            </p>
+          <div className="mb-3">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <Chip label={`Project ${currentProject + 1}`} color="primary" size="small" variant="outlined"/>
+              <h4 className="text-lg text-gray-800">{activeProject?.title}</h4>
+            </div>
             <p className="text-sm text-gray-600">
-              <strong>Maximum file size:</strong> {projectCase.maxSize} MB
+              Allowed formats: {activeAllowedFormats.join(', ')} · Maximum file size: {activeMaxSize} MB
             </p>
           </div>
 
-          <input ref={fileInputRef} type="file" onChange={handleFileSelect} accept={projectCase.allowedFormats.join(',')} className="hidden"/>
+          <input ref={fileInputRef} id={`project-file-${activeUploadKey}`} type="file" onChange={(event) => handleFileSelect(event, activeProject, currentProject)} accept={activeAllowedFormats.join(',')} className="hidden"/>
 
-          {!uploadedFile ? (<div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all">
-              <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4"/>
-              <p className="text-gray-600 mb-2">Click to select file or drag and drop</p>
-              <p className="text-sm text-gray-500">
-                {projectCase.allowedFormats.join(', ')} up to {projectCase.maxSize}MB
-              </p>
-            </div>) : (<div className="border-2 border-green-300 bg-green-50 rounded-xl p-6">
+          {!activeUploadedFile ? (<label htmlFor={`project-file-${activeUploadKey}`} className="block cursor-pointer rounded-xl border-2 border-dashed border-gray-300 p-10 text-center transition-all hover:border-blue-500 hover:bg-blue-50">
+              <Upload className="mx-auto mb-3 h-14 w-14 text-gray-400"/>
+              <p className="text-gray-600">Click to select file for Project {currentProject + 1}</p>
+            </label>) : (<div className="rounded-xl border-2 border-green-300 bg-green-50 p-5">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-green-600 rounded-lg">
-                  <FileText className="w-8 h-8 text-white"/>
+                <div className="rounded-lg bg-green-600 p-3">
+                  <FileText className="h-7 w-7 text-white"/>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="w-5 h-5 text-green-600"/>
-                    <h4 className="text-lg text-gray-800">File Ready for Upload</h4>
+                  <div className="mb-1 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600"/>
+                    <h5 className="text-gray-800">File Ready for Upload</h5>
                   </div>
-                  <p className="text-gray-700 mb-1">{uploadedFile.name}</p>
-                  <p className="text-sm text-gray-600">{formatFileSize(uploadedFile.size)}</p>
+                  <p className="mb-1 text-gray-700">{activeUploadedFile.name}</p>
+                  <p className="text-sm text-gray-600">{formatFileSize(activeUploadedFile.size)}</p>
                 </div>
                 <Button variant="outlined" onClick={() => {
-                setUploadedFile(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-            }} sx={{ borderRadius: '8px', textTransform: 'none' }}>
+                    setUploadedFiles((prev) => {
+                        const next = { ...prev };
+                        delete next[activeUploadKey];
+                        return next;
+                    });
+                    const input = document.getElementById(`project-file-${activeUploadKey}`);
+                    if (input) {
+                        input.value = '';
+                    }
+                }} sx={{ borderRadius: '8px', textTransform: 'none' }}>
                   Change File
                 </Button>
               </div>
@@ -281,9 +322,12 @@ export default function ProjectModule() {
             </Alert>)}
         </Paper>
 
-        {/* Submit Button */}
-        <div className="flex justify-center">
-          <Button variant="contained" size="large" endIcon={<Send />} onClick={handleSubmit} disabled={!uploadedFile} sx={{
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Button variant="outlined" disabled={currentProject === 0} onClick={() => setCurrentProject(currentProject - 1)} sx={{ borderRadius: '12px', textTransform: 'none', padding: '12px 28px' }}>
+            Previous
+          </Button>
+
+          {currentProject === projectCases.length - 1 ? (<Button variant="contained" size="large" endIcon={<Send />} onClick={handleSubmit} disabled={!allUploadsReady} sx={{
             backgroundColor: '#16a34a',
             '&:hover': { backgroundColor: '#15803d' },
             borderRadius: '12px',
@@ -295,7 +339,16 @@ export default function ProjectModule() {
             },
         }}>
             Submit Project
-          </Button>
+          </Button>) : (<Button variant="contained" size="large" onClick={() => setCurrentProject(currentProject + 1)} sx={{
+            backgroundColor: '#1e5ba8',
+            '&:hover': { backgroundColor: '#174c93' },
+            borderRadius: '12px',
+            textTransform: 'none',
+            fontSize: '16px',
+            padding: '14px 48px',
+        }}>
+            Next
+          </Button>)}
         </div>
       </div>
     </div>);

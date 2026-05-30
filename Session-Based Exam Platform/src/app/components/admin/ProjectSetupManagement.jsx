@@ -16,7 +16,7 @@ export default function ProjectSetupManagement() {
     const [editingCase, setEditingCase] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [themeForm, setThemeForm] = useState({ name: '', description: '', icon: '', isActive: true, durationMinutes: 120 });
+    const [themeForm, setThemeForm] = useState({ name: '', description: '', icon: '', isActive: true, randomizeItems: true, itemLimit: 1, durationMinutes: 120 });
     const [caseForm, setCaseForm] = useState({
         themeId: '',
         title: '',
@@ -58,7 +58,7 @@ export default function ProjectSetupManagement() {
 
     const openThemeDialog = (theme) => {
         setEditingTheme(theme || null);
-        setThemeForm(theme ? { name: theme.name, description: theme.description, icon: theme.icon, isActive: theme.isActive !== false, durationMinutes: theme.durationMinutes || 120 } : { name: '', description: '', icon: '', isActive: true, durationMinutes: 120 });
+        setThemeForm(theme ? { name: theme.name, description: theme.description, icon: theme.icon, isActive: theme.isActive !== false, randomizeItems: theme.randomizeItems !== false, itemLimit: theme.itemLimit || 1, durationMinutes: theme.durationMinutes || 120 } : { name: '', description: '', icon: '', isActive: true, randomizeItems: true, itemLimit: 1, durationMinutes: 120 });
         setThemeDialogOpen(true);
     };
 
@@ -169,6 +169,8 @@ export default function ProjectSetupManagement() {
                         <p className="font-semibold text-slate-950">{theme.name}</p>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <Chip label={theme.isActive === false ? 'Nonaktif' : 'Aktif'} size="small" color={theme.isActive === false ? 'default' : 'success'} sx={{ height: 20, fontSize: 11 }}/>
+                          <Chip label={theme.randomizeItems === false ? 'Urut' : 'Acak'} size="small" color={theme.randomizeItems === false ? 'default' : 'secondary'} variant="outlined" sx={{ height: 20, fontSize: 11 }}/>
+                          <Chip label={`${theme.itemLimit || 1} proyek`} size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: 11 }}/>
                           <Chip label={`${theme.durationMinutes || 120} menit`} size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: 11 }}/>
                           <p className="line-clamp-1 text-xs text-slate-500">{theme.description}</p>
                         </div>
@@ -237,7 +239,9 @@ export default function ProjectSetupManagement() {
           <TextField fullWidth size="small" label="Nama Tema" value={themeForm.name} onChange={(e) => setThemeForm({ ...themeForm, name: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" label="Deskripsi" multiline rows={3} value={themeForm.description} onChange={(e) => setThemeForm({ ...themeForm, description: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" type="number" label="Durasi Proyek (menit)" inputProps={{ min: 1 }} value={themeForm.durationMinutes} onChange={(e) => setThemeForm({ ...themeForm, durationMinutes: Number(e.target.value) })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
+          <TextField fullWidth size="small" type="number" label="Jumlah Project Case Dikerjakan" helperText="Minimal 1. Jika diisi 2, peserta mendapat 2 project case pada tema ini." inputProps={{ min: 1 }} value={themeForm.itemLimit} onChange={(e) => setThemeForm({ ...themeForm, itemLimit: Math.max(Number(e.target.value), 1) })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <FormControlLabel control={<Switch checked={themeForm.isActive} onChange={(e) => setThemeForm({ ...themeForm, isActive: e.target.checked })}/>} label={themeForm.isActive ? 'Tema aktif dan tampil ke peserta' : 'Tema nonaktif dan disembunyikan dari peserta'}/>
+          <FormControlLabel control={<Switch checked={themeForm.randomizeItems} onChange={(e) => setThemeForm({ ...themeForm, randomizeItems: e.target.checked })}/>} label={themeForm.randomizeItems ? 'Project case diacak untuk setiap peserta' : 'Project case tampil sesuai urutan'}/>
           <div className="rounded-lg border border-[#1e5ba8]/20 bg-white/70 p-3">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#d7ecff] text-[#1e5ba8]">

@@ -1,55 +1,57 @@
 import { pool, query } from '../db/pool.js';
 export async function listThemes(_req, res) {
-    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes" FROM themes WHERE is_active = TRUE ORDER BY name ASC');
+    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes" FROM themes WHERE is_active = TRUE ORDER BY name ASC');
     res.json(themes);
 }
 export async function listAdminThemes(_req, res) {
-    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes" FROM themes ORDER BY name ASC');
+    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes" FROM themes ORDER BY name ASC');
     res.json(themes);
 }
 export async function listProjectThemes(_req, res) {
-    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes" FROM project_themes WHERE is_active = TRUE ORDER BY name ASC');
+    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes" FROM project_themes WHERE is_active = TRUE ORDER BY name ASC');
     res.json(themes);
 }
 export async function listAdminProjectThemes(_req, res) {
-    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes" FROM project_themes ORDER BY name ASC');
+    const themes = await query('SELECT id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes" FROM project_themes ORDER BY name ASC');
     res.json(themes);
 }
 export async function createTheme(req, res) {
-    const { name, description, icon, id, isActive, durationMinutes } = req.body;
+    const { name, description, icon, id, isActive, randomizeItems, itemLimit, durationMinutes } = req.body;
     if (!name || !description) {
         res.status(400).json({ error: 'Name and description are required' });
         return;
     }
     const themeId = id || `theme-${Date.now()}`;
-    const [created] = await query(`INSERT INTO themes (id, name, description, icon, is_active, duration_minutes)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes"`, [themeId, name, description, icon || '', isActive ?? true, Number(durationMinutes || 60)]);
+    const [created] = await query(`INSERT INTO themes (id, name, description, icon, is_active, randomize_items, item_limit, duration_minutes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes"`, [themeId, name, description, icon || '', isActive ?? true, randomizeItems ?? true, Math.max(Number(itemLimit || 0), 0), Number(durationMinutes || 60)]);
     res.status(201).json(created);
 }
 export async function createProjectTheme(req, res) {
-    const { name, description, icon, id, isActive, durationMinutes } = req.body;
+    const { name, description, icon, id, isActive, randomizeItems, itemLimit, durationMinutes } = req.body;
     if (!name || !description) {
         res.status(400).json({ error: 'Name and description are required' });
         return;
     }
     const themeId = id || `project-theme-${Date.now()}`;
-    const [created] = await query(`INSERT INTO project_themes (id, name, description, icon, is_active, duration_minutes)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes"`, [themeId, name, description, icon || '', isActive ?? true, Number(durationMinutes || 120)]);
+    const [created] = await query(`INSERT INTO project_themes (id, name, description, icon, is_active, randomize_items, item_limit, duration_minutes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes"`, [themeId, name, description, icon || '', isActive ?? true, randomizeItems ?? true, Math.max(Number(itemLimit || 1), 1), Number(durationMinutes || 120)]);
     res.status(201).json(created);
 }
 export async function updateTheme(req, res) {
     const { themeId } = req.params;
-    const { name, description, icon, isActive, durationMinutes } = req.body;
+    const { name, description, icon, isActive, randomizeItems, itemLimit, durationMinutes } = req.body;
     const [updated] = await query(`UPDATE themes
      SET name = COALESCE($2, name),
          description = COALESCE($3, description),
          icon = COALESCE($4, icon),
          is_active = COALESCE($5, is_active),
-         duration_minutes = COALESCE($6, duration_minutes)
+         randomize_items = COALESCE($6, randomize_items),
+         item_limit = COALESCE($7, item_limit),
+         duration_minutes = COALESCE($8, duration_minutes)
      WHERE id = $1
-     RETURNING id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes"`, [themeId, name ?? null, description ?? null, icon ?? null, isActive ?? null, durationMinutes ?? null]);
+     RETURNING id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes"`, [themeId, name ?? null, description ?? null, icon ?? null, isActive ?? null, randomizeItems ?? null, itemLimit === undefined ? null : Math.max(Number(itemLimit || 0), 0), durationMinutes ?? null]);
     if (!updated) {
         res.status(404).json({ error: 'Theme not found' });
         return;
@@ -58,15 +60,17 @@ export async function updateTheme(req, res) {
 }
 export async function updateProjectTheme(req, res) {
     const { themeId } = req.params;
-    const { name, description, icon, isActive, durationMinutes } = req.body;
+    const { name, description, icon, isActive, randomizeItems, itemLimit, durationMinutes } = req.body;
     const [updated] = await query(`UPDATE project_themes
      SET name = COALESCE($2, name),
          description = COALESCE($3, description),
          icon = COALESCE($4, icon),
          is_active = COALESCE($5, is_active),
-         duration_minutes = COALESCE($6, duration_minutes)
+         randomize_items = COALESCE($6, randomize_items),
+         item_limit = COALESCE($7, item_limit),
+         duration_minutes = COALESCE($8, duration_minutes)
      WHERE id = $1
-     RETURNING id, name, description, icon, is_active AS "isActive", duration_minutes AS "durationMinutes"`, [themeId, name ?? null, description ?? null, icon ?? null, isActive ?? null, durationMinutes ?? null]);
+     RETURNING id, name, description, icon, is_active AS "isActive", randomize_items AS "randomizeItems", item_limit AS "itemLimit", duration_minutes AS "durationMinutes"`, [themeId, name ?? null, description ?? null, icon ?? null, isActive ?? null, randomizeItems ?? null, itemLimit === undefined ? null : Math.max(Number(itemLimit || 1), 1), durationMinutes ?? null]);
     if (!updated) {
         res.status(404).json({ error: 'Project theme not found' });
         return;

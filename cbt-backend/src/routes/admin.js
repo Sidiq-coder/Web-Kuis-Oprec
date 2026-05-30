@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { adminAuth } from '../middleware/adminAuth.js';
-import { adminLogin, adminMe, approveAllWaitingParticipants, approveWaitingParticipant, downloadProjectFile, getEssayReviews, getMonitoring, getOverallScores, getProjectReviews, getWaitingParticipants, getWaitingRoomConfig, resetParticipantSessions, updateEssayReview, updateProjectReview, updateWaitingRoomConfig, } from '../controllers/adminController.js';
+import { adminLogin, adminMe, approveAllWaitingParticipants, approveWaitingParticipant, downloadProjectFile, getEssayReviews, getMonitoring, getOverallScores, getProjectFilePreview, getProjectReviews, getWaitingParticipants, getWaitingRoomConfig, resetParticipantSessions, streamProjectFilePreview, updateEssayReview, updateProjectReview, updateWaitingRoomConfig, } from '../controllers/adminController.js';
 import { createProjectTheme, createTheme, deleteProjectTheme, deleteTheme, listAdminProjectThemes, listAdminThemes, updateProjectTheme, updateTheme, } from '../controllers/themeController.js';
 import { createQuestion, updateQuestion, deleteQuestion, } from '../controllers/questionController.js';
 import { listProjectCases, createProjectCase, updateProjectCase, deleteProjectCase, } from '../controllers/projectCaseController.js';
@@ -33,6 +33,8 @@ router.get('/admin/essay-reviews', adminAuth, getEssayReviews);
 router.patch('/admin/essay-reviews/:answerId', adminAuth, updateEssayReview);
 router.get('/admin/project-reviews', adminAuth, getProjectReviews);
 router.patch('/admin/project-reviews/:submissionId', adminAuth, updateProjectReview);
+router.get('/admin/project-reviews/:submissionId/preview', adminAuth, getProjectFilePreview);
+router.get('/admin/project-reviews/:submissionId/preview/content', adminAuth, streamProjectFilePreview);
 router.get('/admin/project-reviews/:submissionId/download', adminAuth, downloadProjectFile);
 router.get('/admin/overall-scores', adminAuth, getOverallScores);
 export default router;

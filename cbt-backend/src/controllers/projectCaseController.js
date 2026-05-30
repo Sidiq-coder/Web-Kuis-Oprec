@@ -1,54 +1,36 @@
-import { pool, query } from '../db/pool.js';
+import { query } from '../db/pool.js';
 export async function getProjectCaseByTheme(req, res) {
     const { themeId } = req.params;
     const { participantId } = req.query;
+    const [themeConfig] = await query('SELECT randomize_items, item_limit FROM project_themes WHERE id = $1', [themeId]);
+    const shouldRandomize = themeConfig?.randomize_items !== false;
+    const itemLimit = Math.max(Number(themeConfig?.item_limit || 1), 1);
+    const caseOrder = shouldRandomize && participantId ? 'md5(id || $2)' : shouldRandomize ? 'random()' : 'id ASC';
+    const buildProjectAssignment = (rows) => {
+        const cases = rows.map((row) => ({
+            id: row.id,
+            themeId: row.themeId,
+            title: row.title,
+            description: row.description,
+            requirements: row.requirements,
+            allowedFormats: row.allowedFormats,
+            maxSize: row.maxSize,
+        }));
+        const firstCase = cases[0];
+        return {
+            ...firstCase,
+            title: cases.length > 1 ? `${cases.length} Project Assignments` : firstCase.title,
+            description: firstCase.description,
+            requirements: firstCase.requirements,
+            allowedFormats: firstCase.allowedFormats,
+            maxSize: firstCase.maxSize,
+            durationMinutes: rows[0]?.durationMinutes,
+            cases,
+        };
+    };
 
     if (participantId) {
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
-            const participantResult = await client.query(`SELECT project_case
-         FROM participants
-         WHERE id = $1
-         FOR UPDATE`, [participantId]);
-            if (participantResult.rowCount === 0) {
-                await client.query('ROLLBACK');
-                res.status(404).json({ error: 'Participant not found' });
-                return;
-            }
-
-            let projectCaseId = participantResult.rows[0]?.project_case;
-            if (projectCaseId) {
-                const assignedCaseResult = await client.query(`SELECT id
-         FROM project_cases
-         WHERE id = $1
-           AND theme_id = $2`, [projectCaseId, themeId]);
-                if (assignedCaseResult.rowCount === 0) {
-                    projectCaseId = null;
-                }
-            }
-
-            if (!projectCaseId) {
-                const randomCaseResult = await client.query(`SELECT id
-         FROM project_cases
-         WHERE theme_id = $1
-         ORDER BY random()
-         LIMIT 1`, [themeId]);
-                projectCaseId = randomCaseResult.rows[0]?.id;
-                if (projectCaseId) {
-                    await client.query(`UPDATE participants
-           SET project_case = $2
-           WHERE id = $1`, [participantId, projectCaseId]);
-                }
-            }
-
-            if (!projectCaseId) {
-                await client.query('ROLLBACK');
-                res.status(404).json({ error: 'Project case not found' });
-                return;
-            }
-
-            const projectCaseResult = await client.query(`SELECT pc.id,
+        const projectCases = await query(`SELECT pc.id,
               pc.theme_id AS "themeId",
               pc.title,
               pc.description,
@@ -58,21 +40,18 @@ export async function getProjectCaseByTheme(req, res) {
               pt.duration_minutes AS "durationMinutes"
        FROM project_cases pc
        JOIN project_themes pt ON pt.id = pc.theme_id
-       WHERE pc.id = $1`, [projectCaseId]);
-            await client.query('COMMIT');
-            res.json(projectCaseResult.rows[0]);
+       WHERE pc.theme_id = $1
+       ORDER BY ${caseOrder}
+       LIMIT ${itemLimit}`, shouldRandomize ? [themeId, participantId] : [themeId]);
+        if (projectCases.length === 0) {
+            res.status(404).json({ error: 'Project case not found' });
             return;
         }
-        catch (error) {
-            await client.query('ROLLBACK').catch(() => { });
-            throw error;
-        }
-        finally {
-            client.release();
-        }
+        res.json(buildProjectAssignment(projectCases));
+        return;
     }
 
-    const [projectCase] = await query(`SELECT pc.id,
+    const projectCases = await query(`SELECT pc.id,
             pc.theme_id AS "themeId",
             pc.title,
             pc.description,
@@ -83,13 +62,13 @@ export async function getProjectCaseByTheme(req, res) {
      FROM project_cases pc
      JOIN project_themes pt ON pt.id = pc.theme_id
      WHERE pc.theme_id = $1
-     ORDER BY random()
-     LIMIT 1`, [themeId]);
-    if (!projectCase) {
+     ORDER BY ${caseOrder}
+     LIMIT ${itemLimit}`, [themeId]);
+    if (projectCases.length === 0) {
         res.status(404).json({ error: 'Project case not found' });
         return;
     }
-    res.json(projectCase);
+    res.json(buildProjectAssignment(projectCases));
 }
 export async function listProjectCases(req, res) {
     const { themeId } = req.query;
