@@ -106,15 +106,24 @@ export async function saveAnswer(req, res) {
         res.status(400).json({ error: 'questionId is required' });
         return;
     }
-    const [question] = await query('SELECT type, correct_answer, weight FROM questions WHERE id = $1', [questionId]);
+    const [question] = await query('SELECT type, correct_answer, correct_answers, weight FROM questions WHERE id = $1', [questionId]);
     if (!question) {
         res.status(404).json({ error: 'Question not found' });
         return;
     }
-    const normalizedAnswer = question.type === 'multiple-choice' ? Number(answer) : answer;
+    const normalizedAnswer = question.type === 'multiple-choice'
+        ? Number(answer)
+        : question.type === 'multiple-answer'
+            ? [...new Set(Array.isArray(answer) ? answer.map(Number).filter(Number.isInteger) : [])].sort((a, b) => a - b)
+            : answer;
+    const correctAnswers = Array.isArray(question.correct_answers)
+        ? [...new Set(question.correct_answers.map(Number).filter(Number.isInteger))].sort((a, b) => a - b)
+        : [];
     const score = question.type === 'multiple-choice'
         ? (Number.isInteger(normalizedAnswer) && normalizedAnswer === question.correct_answer ? question.weight : 0)
-        : null;
+        : question.type === 'multiple-answer'
+            ? (normalizedAnswer.length === correctAnswers.length && normalizedAnswer.every((value, index) => value === correctAnswers[index]) ? question.weight : 0)
+            : null;
     await query(`INSERT INTO exam_answers (participant_id, question_id, answer, score)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (participant_id, question_id)

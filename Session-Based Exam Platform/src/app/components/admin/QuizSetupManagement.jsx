@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Select, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Select, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 import { Edit, FileQuestion, Minus, Palette, Plus, Trash2 } from 'lucide-react';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../utils/api';
 import TechConfirmDialog from '../ui/TechConfirmDialog';
@@ -23,6 +23,7 @@ export default function QuizSetupManagement() {
         question: '',
         options: ['', '', '', ''],
         correctAnswer: 0,
+        correctAnswers: [],
         weight: 10,
     });
 
@@ -69,6 +70,7 @@ export default function QuizSetupManagement() {
                 question: question.question,
                 options: question.options || ['', '', '', ''],
                 correctAnswer: question.correctAnswer || 0,
+                correctAnswers: question.correctAnswers || [],
                 weight: question.weight,
             }
             : {
@@ -77,6 +79,7 @@ export default function QuizSetupManagement() {
                 question: '',
                 options: ['', '', '', ''],
                 correctAnswer: 0,
+                correctAnswers: [],
                 weight: 10,
             });
         setQuestionDialogOpen(true);
@@ -111,10 +114,14 @@ export default function QuizSetupManagement() {
                 : prev.correctAnswer > index
                     ? prev.correctAnswer - 1
                     : Math.min(prev.correctAnswer, options.length - 1);
+            const correctAnswers = (prev.correctAnswers || [])
+                .filter((answerIndex) => answerIndex !== index)
+                .map((answerIndex) => answerIndex > index ? answerIndex - 1 : answerIndex);
             return {
                 ...prev,
                 options,
                 correctAnswer,
+                correctAnswers,
             };
         });
     };
@@ -136,8 +143,9 @@ export default function QuizSetupManagement() {
             themeId: questionForm.themeId,
             type: questionForm.type,
             question: questionForm.question,
-            options: questionForm.type === 'multiple-choice' ? questionForm.options : undefined,
+            options: questionForm.type === 'multiple-choice' || questionForm.type === 'multiple-answer' ? questionForm.options : undefined,
             correctAnswer: questionForm.type === 'multiple-choice' ? questionForm.correctAnswer : undefined,
+            correctAnswers: questionForm.type === 'multiple-answer' ? questionForm.correctAnswers : undefined,
             weight: questionForm.weight,
         };
         if (editingQuestion) {
@@ -251,7 +259,7 @@ export default function QuizSetupManagement() {
               </TableHead>
               <TableBody>
                 {questions.map((question) => (<TableRow key={question.id} hover>
-                  <TableCell><Chip label={question.type === 'multiple-choice' ? 'Multiple Choice' : 'Essay'} size="small"/></TableCell>
+                  <TableCell><Chip label={question.type === 'multiple-answer' ? 'Multiple Answers' : question.type === 'multiple-choice' ? 'Multiple Choice' : 'Essay'} color={question.type === 'multiple-answer' ? 'warning' : 'default'} size="small"/></TableCell>
                   <TableCell><div className="max-w-md line-clamp-2">{question.question}</div></TableCell>
                   <TableCell align="center"><strong>{question.weight}</strong></TableCell>
                   <TableCell align="right">
@@ -273,8 +281,10 @@ export default function QuizSetupManagement() {
           <TextField fullWidth size="small" label="Deskripsi" multiline rows={3} value={themeForm.description} onChange={(e) => setThemeForm({ ...themeForm, description: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" type="number" label="Durasi Kuis (menit)" inputProps={{ min: 1 }} value={themeForm.durationMinutes} onChange={(e) => setThemeForm({ ...themeForm, durationMinutes: Number(e.target.value) })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" type="number" label="Jumlah Soal Ditampilkan" helperText="Isi 0 untuk menampilkan semua soal pada tema ini." inputProps={{ min: 0 }} value={themeForm.itemLimit} onChange={(e) => setThemeForm({ ...themeForm, itemLimit: Math.max(Number(e.target.value), 0) })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
-          <FormControlLabel control={<Switch checked={themeForm.isActive} onChange={(e) => setThemeForm({ ...themeForm, isActive: e.target.checked })}/>} label={themeForm.isActive ? 'Tema aktif dan tampil ke peserta' : 'Tema nonaktif dan disembunyikan dari peserta'}/>
-          <FormControlLabel control={<Switch checked={themeForm.randomizeItems} onChange={(e) => setThemeForm({ ...themeForm, randomizeItems: e.target.checked })}/>} label={themeForm.randomizeItems ? 'Soal diacak untuk setiap peserta' : 'Soal tampil sesuai urutan'}/>
+          <div className="grid gap-2">
+            <FormControlLabel sx={{ m: 0 }} control={<Switch checked={themeForm.isActive} onChange={(e) => setThemeForm({ ...themeForm, isActive: e.target.checked })}/>} label={themeForm.isActive ? 'Tema aktif dan tampil ke peserta' : 'Tema nonaktif dan disembunyikan dari peserta'}/>
+            <FormControlLabel sx={{ m: 0 }} control={<Switch checked={themeForm.randomizeItems} onChange={(e) => setThemeForm({ ...themeForm, randomizeItems: e.target.checked })}/>} label={themeForm.randomizeItems ? 'Soal diacak untuk setiap peserta' : 'Soal tampil sesuai urutan'}/>
+          </div>
           <div className="rounded-lg border border-[#1e5ba8]/20 bg-white/70 p-3">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#d7ecff] text-[#1e5ba8]">
@@ -337,6 +347,7 @@ export default function QuizSetupManagement() {
                       <InputLabel>Question Type</InputLabel>
                       <Select value={questionForm.type} onChange={(e) => setQuestionForm({ ...questionForm, type: e.target.value })} label="Question Type" sx={adminSelectSx}>
                         <MenuItem value="multiple-choice">Multiple Choice</MenuItem>
+                        <MenuItem value="multiple-answer">Multiple Answers</MenuItem>
                         <MenuItem value="essay">Essay</MenuItem>
                       </Select>
                     </FormControl>
@@ -348,14 +359,14 @@ export default function QuizSetupManagement() {
                   <p className="mb-2 font-mono text-xs font-semibold text-[#1e5ba8]">content</p>
                   <TextField fullWidth size="small" label="Question" multiline rows={3} value={questionForm.question} onChange={(e) => setQuestionForm({ ...questionForm, question: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
 
-                  {questionForm.type === 'multiple-choice' && (<div className="mt-1">
+                  {(questionForm.type === 'multiple-choice' || questionForm.type === 'multiple-answer') && (<div className="mt-1">
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-950">Answer Options</p>
                         <p className="text-xs text-slate-500">Minimal 2 opsi. Default 4 opsi.</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-md border border-[#1e5ba8]/16 bg-white/80 px-2 py-1 font-mono text-[11px] text-[#1e5ba8]">select_correct()</span>
+                        <span className="rounded-md border border-[#1e5ba8]/16 bg-white/80 px-2 py-1 font-mono text-[11px] text-[#1e5ba8]">{questionForm.type === 'multiple-answer' ? 'select_multiple()' : 'select_correct()'}</span>
                         <Button size="small" startIcon={<Plus className="h-4 w-4"/>} onClick={addOption} sx={actionButtonSx}>Tambah</Button>
                       </div>
                     </div>
@@ -385,7 +396,7 @@ export default function QuizSetupManagement() {
                         </Button>
                       </div>)}
                     </div>
-                    <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
+                    {questionForm.type === 'multiple-choice' ? (<FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
                       <InputLabel>Correct Answer</InputLabel>
                       <Select value={questionForm.correctAnswer} onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: Number(e.target.value) })} label="Correct Answer" sx={adminSelectSx} renderValue={(value) => {
                         const index = Number(value);
@@ -395,7 +406,18 @@ export default function QuizSetupManagement() {
                           <span className="block max-w-full truncate">Option {index + 1}: {option || '-'}</span>
                         </MenuItem>)}
                       </Select>
-                    </FormControl>
+                    </FormControl>) : (<div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                      <p className="mb-2 text-sm font-semibold text-amber-900">Correct Answers</p>
+                      <p className="mb-2 text-xs text-amber-700">Pilih lebih dari satu jawaban benar. Peserta harus memilih kombinasi yang tepat.</p>
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {questionForm.options.map((option, index) => (<FormControlLabel key={index} control={<Checkbox checked={(questionForm.correctAnswers || []).includes(index)} onChange={(event) => {
+                            const correctAnswers = event.target.checked
+                                ? [...(questionForm.correctAnswers || []), index].sort((a, b) => a - b)
+                                : (questionForm.correctAnswers || []).filter((answerIndex) => answerIndex !== index);
+                            setQuestionForm({ ...questionForm, correctAnswers });
+                        }}/>} label={`Option ${index + 1}: ${option || '-'}`}/>))}
+                      </div>
+                    </div>)}
                   </div>)}
                 </div>
               </div>
@@ -404,7 +426,7 @@ export default function QuizSetupManagement() {
         </DialogContent>
         <DialogActions sx={{ ...adminDialogActionsSx, borderTop: '1px solid rgba(30, 91, 168, 0.12)', background: 'rgba(239, 247, 255, 0.8)' }}>
           <Button onClick={() => setQuestionDialogOpen(false)} sx={secondaryButtonSx}>Cancel</Button>
-          <Button onClick={saveQuestion} variant="contained" disabled={!questionForm.themeId || !questionForm.question || (questionForm.type === 'multiple-choice' && questionForm.options.some((option) => !option))} sx={primaryButtonSx}>Save</Button>
+          <Button onClick={saveQuestion} variant="contained" disabled={!questionForm.themeId || !questionForm.question || ((questionForm.type === 'multiple-choice' || questionForm.type === 'multiple-answer') && questionForm.options.some((option) => !option)) || (questionForm.type === 'multiple-answer' && questionForm.correctAnswers.length < 2)} sx={primaryButtonSx}>Save</Button>
         </DialogActions>
       </Dialog>
     </AdminShell>);

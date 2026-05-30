@@ -96,6 +96,11 @@ function jsonValue(value) {
 }
 
 function answerLabel(row) {
+    if (row.type === 'multiple-answer') {
+        const options = Array.isArray(row.options) ? row.options : [];
+        const indexes = Array.isArray(row.answer) ? row.answer : [];
+        return indexes.map((index) => `${Number(index) + 1}. ${options[Number(index)] || ''}`).join(' | ');
+    }
     if (row.type !== 'multiple-choice') {
         return jsonValue(row.answer);
     }
@@ -105,6 +110,11 @@ function answerLabel(row) {
 }
 
 function correctAnswerLabel(row) {
+    if (row.type === 'multiple-answer') {
+        const options = Array.isArray(row.options) ? row.options : [];
+        const indexes = Array.isArray(row.correct_answers) ? row.correct_answers : [];
+        return indexes.map((index) => `${Number(index) + 1}. ${options[Number(index)] || ''}`).join(' | ');
+    }
     if (row.type !== 'multiple-choice') {
         return '';
     }
@@ -201,6 +211,7 @@ async function buildAnswersRows() {
             q.type,
             q.options,
             q.correct_answer,
+            q.correct_answers,
             q.weight,
             ea.answer,
             ea.score,

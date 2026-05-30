@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { Paper, Button, Radio, RadioGroup, FormControlLabel, TextField, LinearProgress, Alert, Chip } from '@mui/material';
+import { Paper, Button, Checkbox, Radio, RadioGroup, FormControlLabel, TextField, LinearProgress, Alert, Chip } from '@mui/material';
 import { Braces, ChevronLeft, ChevronRight, Clock, Code2, Cpu, Save, Send, TerminalSquare } from 'lucide-react';
 import { getSession, updateSession, autoSave } from '../../utils/sessionManager';
 import { apiGet, apiPatch, apiPost } from '../../utils/api';
@@ -160,7 +160,8 @@ export default function ExamModule() {
       </div>);
     }
 
-    const answeredCount = Object.keys(answers).length;
+    const isAnswerFilled = (answer) => Array.isArray(answer) ? answer.length > 0 : answer !== undefined && answer !== '';
+    const answeredCount = Object.values(answers).filter(isAnswerFilled).length;
     const isTimeRunningOut = timeLeft < 300; // less than 5 minutes
     const currentAnswer = answers[question.id];
 
@@ -267,11 +268,16 @@ export default function ExamModule() {
                 {Array.from({ length: 4 }).map((_, index) => (<div key={index} className="h-3 w-3 rounded-[3px] bg-[#1e5ba8]/18"/>))}
               </div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
-                <Chip label={question.type === 'multiple-choice' ? 'Multiple Choice' : 'Essay'} size="small" sx={{
+                <Chip label={question.type === 'multiple-answer' ? 'Multiple Answers' : question.type === 'multiple-choice' ? 'Multiple Choice' : 'Essay'} size="small" sx={{
                 bgcolor: '#1e5ba8',
                 color: 'white',
                 fontWeight: 700,
             }}/>
+                {question.type === 'multiple-answer' && (<Chip label="Select more than one answer" size="small" sx={{
+                    bgcolor: '#fef3c7',
+                    color: '#92400e',
+                    fontWeight: 700,
+                }}/>)}
                 <Chip label={`${question.weight} points`} size="small" sx={{
                 bgcolor: 'rgba(30, 91, 168, 0.12)',
                 color: '#1e5ba8',
@@ -312,7 +318,27 @@ export default function ExamModule() {
                         }}/>);
                     })}
                   </div>
-                </RadioGroup>) : (<TextField fullWidth multiline rows={7} placeholder="Type your answer here..." value={answers[question.id] || ''} onChange={(e) => handleAnswerChange(question.id, e.target.value)} variant="outlined" sx={{
+                </RadioGroup>) : question.type === 'multiple-answer' ? (<div className="grid gap-3">
+                  {question.options?.map((option, index) => {
+                    const selectedAnswers = Array.isArray(currentAnswer) ? currentAnswer : [];
+                    const isChosen = selectedAnswers.includes(index);
+                    return (<FormControlLabel key={index} control={<Checkbox checked={isChosen} onChange={(event) => {
+                        const nextAnswers = event.target.checked
+                            ? [...selectedAnswers, index].sort((a, b) => a - b)
+                            : selectedAnswers.filter((answerIndex) => answerIndex !== index);
+                        handleAnswerChange(question.id, nextAnswers);
+                    }} sx={{
+                        color: '#1e5ba8',
+                        '&.Mui-checked': { color: '#1e5ba8' },
+                    }}/>} label={<span className="text-sm leading-6 text-slate-700">{option}</span>} sx={{
+                        m: 0,
+                        p: '10px 12px',
+                        borderRadius: '12px',
+                        border: isChosen ? '2px solid #1e5ba8' : '1px solid rgba(30, 91, 168, 0.16)',
+                        background: isChosen ? 'linear-gradient(135deg, #eef7ff, #dceeff)' : 'rgba(255,255,255,0.72)',
+                    }}/>);
+                  })}
+                </div>) : (<TextField fullWidth multiline rows={7} placeholder="Type your answer here..." value={answers[question.id] || ''} onChange={(e) => handleAnswerChange(question.id, e.target.value)} variant="outlined" sx={{
                     '& .MuiOutlinedInput-root': {
                         borderRadius: '12px',
                         backgroundColor: 'rgba(255,255,255,0.82)',
@@ -344,7 +370,7 @@ export default function ExamModule() {
               <div className="grid grid-cols-5 gap-2">
                 {examQuestions.map((item, index) => {
                     const isCurrent = index === currentQuestion;
-                    const isAnswered = answers[item.id] !== undefined;
+                    const isAnswered = isAnswerFilled(answers[item.id]);
                     return (<button key={item.id || index} type="button" onClick={() => setCurrentQuestion(index)} className={`h-9 rounded-md border text-sm font-semibold transition ${isCurrent
                         ? 'border-[#1e5ba8] bg-[#1e5ba8] text-white shadow-md shadow-blue-900/20'
                         : isAnswered

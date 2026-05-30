@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS questions (
   question TEXT NOT NULL,
   options JSONB,
   correct_answer INTEGER,
+  correct_answers JSONB,
   weight INTEGER NOT NULL
 );
 
@@ -122,6 +123,7 @@ ALTER TABLE project_themes ADD COLUMN IF NOT EXISTS item_limit INTEGER NOT NULL 
 ALTER TABLE themes ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 60;
 ALTER TABLE project_themes ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 120;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS project_case TEXT REFERENCES project_cases(id);
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS correct_answers JSONB;
 
 INSERT INTO project_themes (id, name, description, icon)
 SELECT DISTINCT t.id, t.name, t.description, t.icon
