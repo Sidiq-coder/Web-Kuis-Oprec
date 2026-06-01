@@ -5,6 +5,7 @@ import { Clock, Upload, FileText, Send, CheckCircle } from 'lucide-react';
 import { getSession, updateSession } from '../../utils/sessionManager';
 import { apiGet, apiPatch, apiPost } from '../../utils/api';
 import TechConfirmDialog from '../ui/TechConfirmDialog';
+import AttachmentView from '../ui/AttachmentView';
 export default function ProjectModule() {
     const navigate = useNavigate();
     const [currentProject, setCurrentProject] = useState(0);
@@ -244,6 +245,7 @@ export default function ProjectModule() {
               </ul>
             </div>
           </div>
+          <AttachmentView item={activeProject} className="mb-6"/>
 
           {projectCases.length > 1 && (<div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
               <p className="mb-3 text-sm font-semibold text-gray-700">Project Navigator</p>

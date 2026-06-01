@@ -24,6 +24,8 @@ export default function ProjectSetupManagement() {
         requirementsText: '',
         allowedFormatsText: '',
         maxSize: 10,
+        attachmentFile: null,
+        removeAttachment: false,
     });
 
     const loadThemes = async () => {
@@ -72,6 +74,8 @@ export default function ProjectSetupManagement() {
                 requirementsText: (projectCase.requirements || []).join('\n'),
                 allowedFormatsText: (projectCase.allowedFormats || []).join(', '),
                 maxSize: projectCase.maxSize || 10,
+                attachmentFile: null,
+                removeAttachment: false,
             }
             : {
                 themeId: selectedTheme,
@@ -80,6 +84,8 @@ export default function ProjectSetupManagement() {
                 requirementsText: '',
                 allowedFormatsText: '',
                 maxSize: 10,
+                attachmentFile: null,
+                removeAttachment: false,
             });
         setCaseDialogOpen(true);
     };
@@ -115,12 +121,19 @@ export default function ProjectSetupManagement() {
             requirements: parseList(caseForm.requirementsText),
             allowedFormats: parseList(caseForm.allowedFormatsText),
             maxSize: Number(caseForm.maxSize),
+            removeAttachment: caseForm.removeAttachment,
         };
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+        });
+        if (caseForm.attachmentFile)
+            formData.append('attachment', caseForm.attachmentFile);
         if (editingCase) {
-            await apiPatch(`/api/admin/project-cases/${editingCase.id}`, payload, true);
+            await apiPatch(`/api/admin/project-cases/${editingCase.id}`, formData, true);
         }
         else {
-            await apiPost('/api/admin/project-cases', payload, true);
+            await apiPost('/api/admin/project-cases', formData, true);
         }
         setCaseDialogOpen(false);
         await loadCases(selectedTheme);
@@ -218,6 +231,7 @@ export default function ProjectSetupManagement() {
                   <TableCell>
                     <p className="font-semibold text-slate-950">{projectCase.title}</p>
                     <p className="line-clamp-2 max-w-md text-xs text-slate-500">{projectCase.description}</p>
+                    {projectCase.attachmentUrl && <Chip label="Ada lampiran" size="small" color="info" variant="outlined" sx={{ mt: 0.75, height: 20, fontSize: 11 }}/>}
                   </TableCell>
                   <TableCell align="center"><strong>{projectCase.maxSize}</strong></TableCell>
                   <TableCell><div className="flex flex-wrap gap-1">{(projectCase.allowedFormats || []).map((format) => <Chip key={format} label={format} size="small"/>)}</div></TableCell>
@@ -271,6 +285,17 @@ export default function ProjectSetupManagement() {
           <TextField fullWidth size="small" label="Requirements (one per line)" multiline rows={4} value={caseForm.requirementsText} onChange={(e) => setCaseForm({ ...caseForm, requirementsText: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" label="Allowed Formats" helperText="Example: .zip, .rar, .pdf" value={caseForm.allowedFormatsText} onChange={(e) => setCaseForm({ ...caseForm, allowedFormatsText: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
           <TextField fullWidth size="small" type="number" label="Max Size (MB)" inputProps={{ min: 1 }} value={caseForm.maxSize} onChange={(e) => setCaseForm({ ...caseForm, maxSize: Number(e.target.value) })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
+          <div className="rounded-lg border border-[#1e5ba8]/20 bg-white/70 p-3">
+            <p className="text-sm font-semibold text-slate-950">Lampiran proyek <span className="font-normal text-slate-500">(opsional, maks. 10 MB)</span></p>
+            <p className="mb-2 text-xs text-slate-500">Tambahkan gambar brief, PDF, atau file pendukung lain yang dapat dibuka peserta.</p>
+            <Button component="label" variant="outlined" size="small" sx={secondaryButtonSx}>
+              Pilih File
+              <input hidden type="file" onChange={(event) => setCaseForm({ ...caseForm, attachmentFile: event.target.files?.[0] || null, removeAttachment: false })}/>
+            </Button>
+            {caseForm.attachmentFile && <p className="mt-2 text-xs text-slate-600">{caseForm.attachmentFile.name}</p>}
+            {!caseForm.attachmentFile && editingCase?.attachmentName && !caseForm.removeAttachment && <p className="mt-2 text-xs text-slate-600">Saat ini: {editingCase.attachmentName}</p>}
+            {editingCase?.attachmentUrl && !caseForm.removeAttachment && <Button size="small" color="error" onClick={() => setCaseForm({ ...caseForm, attachmentFile: null, removeAttachment: true })} sx={{ mt: 1, textTransform: 'none' }}>Hapus lampiran</Button>}
+          </div>
         </div></DialogContent>
         <DialogActions sx={adminDialogActionsSx}><Button onClick={() => setCaseDialogOpen(false)} sx={secondaryButtonSx}>Cancel</Button><Button onClick={saveCase} variant="contained" disabled={!caseForm.themeId || !caseForm.title.trim() || !caseForm.description.trim() || !caseForm.requirementsText.trim() || !caseForm.allowedFormatsText.trim() || caseForm.maxSize <= 0} sx={primaryButtonSx}>Save</Button></DialogActions>
       </Dialog>

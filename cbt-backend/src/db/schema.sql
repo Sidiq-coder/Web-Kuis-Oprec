@@ -50,7 +50,10 @@ CREATE TABLE IF NOT EXISTS questions (
   options JSONB,
   correct_answer INTEGER,
   correct_answers JSONB,
-  weight INTEGER NOT NULL
+  weight INTEGER NOT NULL,
+  attachment_name TEXT,
+  attachment_path TEXT,
+  attachment_mime_type TEXT
 );
 
 CREATE TABLE IF NOT EXISTS project_cases (
@@ -60,7 +63,10 @@ CREATE TABLE IF NOT EXISTS project_cases (
   description TEXT NOT NULL,
   requirements JSONB NOT NULL,
   allowed_formats JSONB NOT NULL,
-  max_size INTEGER NOT NULL
+  max_size INTEGER NOT NULL,
+  attachment_name TEXT,
+  attachment_path TEXT,
+  attachment_mime_type TEXT
 );
 
 CREATE TABLE IF NOT EXISTS participants (
@@ -124,6 +130,12 @@ ALTER TABLE themes ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DE
 ALTER TABLE project_themes ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 120;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS project_case TEXT REFERENCES project_cases(id);
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS correct_answers JSONB;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS attachment_name TEXT;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS attachment_path TEXT;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS attachment_mime_type TEXT;
+ALTER TABLE project_cases ADD COLUMN IF NOT EXISTS attachment_name TEXT;
+ALTER TABLE project_cases ADD COLUMN IF NOT EXISTS attachment_path TEXT;
+ALTER TABLE project_cases ADD COLUMN IF NOT EXISTS attachment_mime_type TEXT;
 
 INSERT INTO project_themes (id, name, description, icon)
 SELECT DISTINCT t.id, t.name, t.description, t.icon

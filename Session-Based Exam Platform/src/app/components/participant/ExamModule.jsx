@@ -5,6 +5,7 @@ import { Braces, ChevronLeft, ChevronRight, Clock, Code2, Cpu, Save, Send, Termi
 import { getSession, updateSession, autoSave } from '../../utils/sessionManager';
 import { apiGet, apiPatch, apiPost } from '../../utils/api';
 import TechConfirmDialog from '../ui/TechConfirmDialog';
+import AttachmentView from '../ui/AttachmentView';
 
 export default function ExamModule() {
     const navigate = useNavigate();
@@ -293,6 +294,7 @@ export default function ExamModule() {
                 <p className="mb-2 font-mono text-xs font-semibold text-[#1e5ba8]">const question_{currentQuestion + 1} =</p>
                 <h2 className="text-lg font-semibold leading-8 text-slate-950 sm:text-xl">{question.question}</h2>
               </div>
+              <AttachmentView item={question} className="mt-4"/>
 
               <div className="mt-4">
                 {question.type === 'multiple-choice' ? (<RadioGroup value={currentAnswer ?? ''} onChange={(e) => handleAnswerChange(question.id, parseInt(e.target.value))}>

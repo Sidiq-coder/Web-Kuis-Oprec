@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Alert, Button, InputAdornment, Paper, TextField } from '@mui/material';
-import { ArrowLeft, KeyRound, ShieldCheck, TerminalSquare, UserRound } from 'lucide-react';
+import { Alert, Button, IconButton, InputAdornment, Paper, TextField, Tooltip } from '@mui/material';
+import { ArrowLeft, Eye, EyeOff, KeyRound, ShieldCheck, TerminalSquare, UserRound } from 'lucide-react';
 import { apiPost, setAdminToken } from '../../utils/api';
 import { adminFieldSx, primaryButtonSx, secondaryButtonSx } from './AdminShell';
 
@@ -10,6 +10,7 @@ export default function AdminLogin() {
     const location = useLocation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -88,7 +89,16 @@ export default function AdminLogin() {
               <form onSubmit={handleSubmit}>
                 <div className="space-y-5">
                   <TextField label="Username" value={username} onChange={(event) => setUsername(event.target.value)} fullWidth size="small" sx={adminFieldSx} InputLabelProps={{ shrink: true }} InputProps={{ startAdornment: <InputAdornment position="start"><UserRound className="h-4 w-4 text-slate-500"/></InputAdornment> }}/>
-                  <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} fullWidth size="small" sx={adminFieldSx} InputLabelProps={{ shrink: true }} InputProps={{ startAdornment: <InputAdornment position="start"><KeyRound className="h-4 w-4 text-slate-500"/></InputAdornment> }}/>
+                  <TextField label="Password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} fullWidth size="small" sx={adminFieldSx} InputLabelProps={{ shrink: true }} InputProps={{
+                      startAdornment: <InputAdornment position="start"><KeyRound className="h-4 w-4 text-slate-500"/></InputAdornment>,
+                      endAdornment: <InputAdornment position="end">
+                        <Tooltip title={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}>
+                          <IconButton aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'} edge="end" size="small" onClick={() => setShowPassword((value) => !value)}>
+                            {showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                          </IconButton>
+                        </Tooltip>
+                      </InputAdornment>,
+                  }}/>
                 </div>
 
                 {error && <Alert severity="error" sx={{ borderRadius: '10px' }}>{error}</Alert>}

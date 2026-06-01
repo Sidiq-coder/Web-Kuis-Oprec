@@ -25,6 +25,8 @@ export default function QuizSetupManagement() {
         correctAnswer: 0,
         correctAnswers: [],
         weight: 10,
+        attachmentFile: null,
+        removeAttachment: false,
     });
 
     const loadThemes = async () => {
@@ -72,6 +74,8 @@ export default function QuizSetupManagement() {
                 correctAnswer: question.correctAnswer || 0,
                 correctAnswers: question.correctAnswers || [],
                 weight: question.weight,
+                attachmentFile: null,
+                removeAttachment: false,
             }
             : {
                 themeId: selectedTheme,
@@ -81,6 +85,8 @@ export default function QuizSetupManagement() {
                 correctAnswer: 0,
                 correctAnswers: [],
                 weight: 10,
+                attachmentFile: null,
+                removeAttachment: false,
             });
         setQuestionDialogOpen(true);
     };
@@ -147,12 +153,20 @@ export default function QuizSetupManagement() {
             correctAnswer: questionForm.type === 'multiple-choice' ? questionForm.correctAnswer : undefined,
             correctAnswers: questionForm.type === 'multiple-answer' ? questionForm.correctAnswers : undefined,
             weight: questionForm.weight,
+            removeAttachment: questionForm.removeAttachment,
         };
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            if (value !== undefined)
+                formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+        });
+        if (questionForm.attachmentFile)
+            formData.append('attachment', questionForm.attachmentFile);
         if (editingQuestion) {
-            await apiPatch(`/api/admin/questions/${editingQuestion.id}`, payload, true);
+            await apiPatch(`/api/admin/questions/${editingQuestion.id}`, formData, true);
         }
         else {
-            await apiPost('/api/admin/questions', payload, true);
+            await apiPost('/api/admin/questions', formData, true);
         }
         setQuestionDialogOpen(false);
         await loadQuestions(selectedTheme);
@@ -260,7 +274,7 @@ export default function QuizSetupManagement() {
               <TableBody>
                 {questions.map((question) => (<TableRow key={question.id} hover>
                   <TableCell><Chip label={question.type === 'multiple-answer' ? 'Multiple Answers' : question.type === 'multiple-choice' ? 'Multiple Choice' : 'Essay'} color={question.type === 'multiple-answer' ? 'warning' : 'default'} size="small"/></TableCell>
-                  <TableCell><div className="max-w-md line-clamp-2">{question.question}</div></TableCell>
+                  <TableCell><div className="max-w-md line-clamp-2">{question.question}</div>{question.attachmentUrl && <Chip label="Ada lampiran" size="small" color="info" variant="outlined" sx={{ mt: 0.75, height: 20, fontSize: 11 }}/>}</TableCell>
                   <TableCell align="center"><strong>{question.weight}</strong></TableCell>
                   <TableCell align="right">
                     <Button size="small" startIcon={<Edit className="h-4 w-4"/>} onClick={() => openQuestionDialog(question)} sx={actionButtonSx}>Edit</Button>
@@ -358,6 +372,17 @@ export default function QuizSetupManagement() {
                 <div className="min-w-0 rounded-lg border border-[#1e5ba8]/24 bg-[#eaf5ff]/95 p-3 shadow-sm">
                   <p className="mb-2 font-mono text-xs font-semibold text-[#1e5ba8]">content</p>
                   <TextField fullWidth size="small" label="Question" multiline rows={3} value={questionForm.question} onChange={(e) => setQuestionForm({ ...questionForm, question: e.target.value })} sx={adminFieldSx} InputLabelProps={{ shrink: true }}/>
+                  <div className="rounded-lg border border-[#1e5ba8]/20 bg-white/70 p-3">
+                    <p className="text-sm font-semibold text-slate-950">Lampiran soal <span className="font-normal text-slate-500">(opsional, maks. 10 MB)</span></p>
+                    <p className="mb-2 text-xs text-slate-500">Tambahkan gambar atau file pendukung yang dapat dibuka peserta.</p>
+                    <Button component="label" variant="outlined" size="small" sx={secondaryButtonSx}>
+                      Pilih File
+                      <input hidden type="file" onChange={(event) => setQuestionForm({ ...questionForm, attachmentFile: event.target.files?.[0] || null, removeAttachment: false })}/>
+                    </Button>
+                    {questionForm.attachmentFile && <p className="mt-2 text-xs text-slate-600">{questionForm.attachmentFile.name}</p>}
+                    {!questionForm.attachmentFile && editingQuestion?.attachmentName && !questionForm.removeAttachment && <p className="mt-2 text-xs text-slate-600">Saat ini: {editingQuestion.attachmentName}</p>}
+                    {editingQuestion?.attachmentUrl && !questionForm.removeAttachment && <Button size="small" color="error" onClick={() => setQuestionForm({ ...questionForm, attachmentFile: null, removeAttachment: true })} sx={{ mt: 1, textTransform: 'none' }}>Hapus lampiran</Button>}
+                  </div>
 
                   {(questionForm.type === 'multiple-choice' || questionForm.type === 'multiple-answer') && (<div className="mt-1">
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

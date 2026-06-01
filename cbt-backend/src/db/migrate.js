@@ -11,7 +11,7 @@ export async function runMigration() {
     console.log('Migration complete');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
     runMigration()
         .then(() => pool.end())
         .catch((error) => {
