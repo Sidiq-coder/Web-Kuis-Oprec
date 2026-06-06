@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Paper } from '@mui/material';
-import { ArrowRight, Code2, DatabaseZap, FileCheck2, RotateCcw, ShieldCheck, TerminalSquare } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, Code2, DatabaseZap, FileCheck2, RotateCcw, ShieldCheck, TerminalSquare } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import logoImage from '../../imports/Screenshot_2026-05-22_134954.png';
 import { clearSession, getSession } from '../utils/sessionManager';
@@ -164,6 +164,19 @@ export default function Home() {
         }}>
                       Reset Sesi dan Mulai Baru
                     </Button>)}
+                  <Button variant="outlined" fullWidth startIcon={<ClipboardCheck />} onClick={() => navigate('/cek-kelulusan')} sx={{
+            mt: 1.5,
+            borderRadius: '10px',
+            textTransform: 'none',
+            fontSize: '15px',
+            fontWeight: 700,
+            padding: '10px',
+            borderColor: 'rgba(30, 91, 168, 0.28)',
+            color: '#1e5ba8',
+            '&:hover': { borderColor: '#1e5ba8', backgroundColor: '#eef7ff' },
+        }}>
+                    Cek Kelulusan
+                  </Button>
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">

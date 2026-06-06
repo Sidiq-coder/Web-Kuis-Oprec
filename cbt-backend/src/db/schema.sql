@@ -117,6 +117,15 @@ CREATE TABLE IF NOT EXISTS project_submissions (
   status TEXT NOT NULL DEFAULT 'pending'
 );
 
+CREATE TABLE IF NOT EXISTS participant_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_number TEXT UNIQUE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('accepted', 'rejected')),
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 ALTER TABLE project_submissions ADD COLUMN IF NOT EXISTS drive_folder_id TEXT;
 ALTER TABLE project_submissions ADD COLUMN IF NOT EXISTS drive_file_id TEXT;
 ALTER TABLE project_submissions ADD COLUMN IF NOT EXISTS drive_file_url TEXT;

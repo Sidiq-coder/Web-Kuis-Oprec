@@ -4,6 +4,7 @@ import { adminLogin, adminMe, approveAllWaitingParticipants, approveWaitingParti
 import { createProjectTheme, createTheme, deleteProjectTheme, deleteTheme, listAdminProjectThemes, listAdminThemes, updateProjectTheme, updateTheme, } from '../controllers/themeController.js';
 import { createQuestion, updateQuestion, deleteQuestion, } from '../controllers/questionController.js';
 import { listProjectCases, createProjectCase, updateProjectCase, deleteProjectCase, } from '../controllers/projectCaseController.js';
+import { createParticipantResult, deleteParticipantResult, listParticipantResults, updateParticipantResult, } from '../controllers/participantResultController.js';
 import { uploadAttachment } from '../middleware/attachmentUpload.js';
 const router = Router();
 router.post('/admin/login', adminLogin);
@@ -38,4 +39,8 @@ router.get('/admin/project-reviews/:submissionId/preview', adminAuth, getProject
 router.get('/admin/project-reviews/:submissionId/preview/content', adminAuth, streamProjectFilePreview);
 router.get('/admin/project-reviews/:submissionId/download', adminAuth, downloadProjectFile);
 router.get('/admin/overall-scores', adminAuth, getOverallScores);
+router.get('/admin/participant-results', adminAuth, listParticipantResults);
+router.post('/admin/participant-results', adminAuth, createParticipantResult);
+router.patch('/admin/participant-results/:resultId', adminAuth, updateParticipantResult);
+router.delete('/admin/participant-results/:resultId', adminAuth, deleteParticipantResult);
 export default router;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Paper } from '@mui/material';
-import { BarChart3, FileText, FolderOpen, Home, Layers3, LayoutDashboard, Palette, ShieldCheck, Users } from 'lucide-react';
+import { BarChart3, ClipboardCheck, FileText, FolderOpen, Home, Layers3, LayoutDashboard, Palette, ShieldCheck, Users } from 'lucide-react';
 import { apiGet } from '../../utils/api';
 import AdminShell, { AdminStatCard, adminPageSx, secondaryButtonSx } from './AdminShell';
 
@@ -51,6 +51,7 @@ export default function AdminDashboard() {
         { title: 'Participant Monitoring', description: 'Track participant progress in real-time', icon: <Users className="h-6 w-6"/>, path: '/admin/monitoring', code: 'watch.live()' },
         { title: 'Waiting Room', description: 'Aktifkan antrean dan izinkan peserta masuk kuis atau proyek', icon: <ShieldCheck className="h-6 w-6"/>, path: '/admin/waiting-room', code: 'gate.approve()' },
         { title: 'Overall Scores', description: 'View total exam and project results', icon: <BarChart3 className="h-6 w-6"/>, path: '/admin/overall-scores', code: 'scores.total()' },
+        { title: 'Participant Results', description: 'Isi nomor peserta dan status diterima atau tidak diterima', icon: <ClipboardCheck className="h-6 w-6"/>, path: '/admin/participant-results', code: 'results.publish()' },
         { title: 'Essay Review', description: 'Grade and review essay submissions', icon: <FileText className="h-6 w-6"/>, path: '/admin/essay-review', code: 'essay.grade()' },
         { title: 'Project Review', description: 'Download and evaluate project files', icon: <FolderOpen className="h-6 w-6"/>, path: '/admin/project-review', code: 'project.review()' },
     ];

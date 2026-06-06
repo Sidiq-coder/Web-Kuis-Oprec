@@ -7,6 +7,7 @@ import ProjectModule from "./components/participant/ProjectModule";
 import ExamComplete from "./components/participant/ExamComplete";
 import WaitingRoom from "./components/participant/WaitingRoom";
 import ParticipantFlowGuard from "./components/participant/ParticipantFlowGuard";
+import ResultCheck from "./components/participant/ResultCheck";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import ThemeManagement from "./components/admin/ThemeManagement";
 import ProjectThemeManagement from "./components/admin/ProjectThemeManagement";
@@ -21,6 +22,7 @@ import WaitingRoomManagement from "./components/admin/WaitingRoomManagement";
 import AdminLogin from "./components/admin/AdminLogin";
 import AdminGuard from "./components/admin/AdminGuard";
 import OverallScores from "./components/admin/OverallScores";
+import ParticipantResults from "./components/admin/ParticipantResults";
 import Home from "./components/Home";
 export const router = createBrowserRouter([
     {
@@ -32,6 +34,10 @@ export const router = createBrowserRouter([
     {
         path: "/login",
         Component: AdminLogin,
+    },
+    {
+        path: "/cek-kelulusan",
+        Component: ResultCheck,
     },
     // Participant Routes
     {
@@ -147,6 +153,12 @@ export const router = createBrowserRouter([
         path: "/admin/overall-scores",
         element: (<AdminGuard>
         <OverallScores />
+      </AdminGuard>),
+    },
+    {
+        path: "/admin/participant-results",
+        element: (<AdminGuard>
+        <ParticipantResults />
       </AdminGuard>),
     },
 ]);
